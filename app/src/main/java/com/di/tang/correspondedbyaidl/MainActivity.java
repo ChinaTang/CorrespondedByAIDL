@@ -26,7 +26,21 @@ public class MainActivity extends AppCompatActivity {
     private Handler mHandler = new Handler(){
         @Override
         public void handleMessage(Message msg){
+            switch(msg.what){
+                case MESSAGE_NEW_ARRIVED:
+                    Log.d(TAG, "handleMessage: " + msg.obj);
+                    break;
+                default:
+                    super.handleMessage(msg);
+            }
+        }
+    };
 
+    private IOnNewBookArrivedListener listener = new IOnNewBookArrivedListener.Stub(){
+
+        @Override
+        public void onNewBookArrived(Book newBook) throws RemoteException {
+            mHandler.obtainMessage(MESSAGE_NEW_ARRIVED, newBook).sendToTarget();
         }
     };
 
@@ -40,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "onServiceConnected: " + "List type: "
                         + list.getClass().getCanonicalName());
                 Log.d(TAG, "onServiceConnected: " + list.toString());
+                bookManager.registerListener(listener);
             }catch (RemoteException e){
                 Log.e(TAG, "onServiceConnected: " + e.toString() );
             }
@@ -58,8 +73,17 @@ public class MainActivity extends AppCompatActivity {
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
+    @Override
     public void onDestroy(){
         super.onDestroy();
+        if(mRemoteBookManager != null && mRemoteBookManager.asBinder().isBinderAlive()){
+            try{
+                Log.d(TAG, "onDestroy: unregister listener " + listener);
+                mRemoteBookManager.unregisterListener(listener);
+            }catch(RemoteException e){
+                Log.d(TAG, "onDestroy: unregisterListener SUCCESS");
+            }
+        }
         unbindService(serviceConnection);
     }
 

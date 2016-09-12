@@ -26,6 +26,7 @@ public class BookManagerService extends Service {
     private CopyOnWriteArrayList<IOnNewBookArrivedListener> listeners
             = new CopyOnWriteArrayList<IOnNewBookArrivedListener>();
 
+
     private void onNewBookArriv(Book book) throws RemoteException {
         mBookList.add(book);
         for (int i = 0; i < listeners.size(); i++) {
