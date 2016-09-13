@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -23,16 +24,20 @@ public class BookManagerService extends Service {
 
     private CopyOnWriteArrayList<Book> mBookList = new CopyOnWriteArrayList<Book>();
 
-    private CopyOnWriteArrayList<IOnNewBookArrivedListener> listeners
-            = new CopyOnWriteArrayList<IOnNewBookArrivedListener>();
+    private RemoteCallbackList<IOnNewBookArrivedListener> listeners
+            = new RemoteCallbackList<IOnNewBookArrivedListener>();
 
 
     private void onNewBookArriv(Book book) throws RemoteException {
         mBookList.add(book);
-        for (int i = 0; i < listeners.size(); i++) {
-            IOnNewBookArrivedListener ArrivedListener = listeners.get(i);
-            ArrivedListener.onNewBookArrived(book);
+        final int N = listeners.beginBroadcast();
+        for (int i = 0; i < N; i++) {
+            IOnNewBookArrivedListener ArrivedListener = listeners.getBroadcastItem(i);
+            if (ArrivedListener != null) {
+                ArrivedListener.onNewBookArrived(book);
+            }
         }
+        listeners.finishBroadcast();
     }
 
     private Runnable ServiceWorker = new Runnable() {
@@ -69,23 +74,15 @@ public class BookManagerService extends Service {
 
         @Override
         public void registerListener(IOnNewBookArrivedListener listener) throws RemoteException {
-            if (!listeners.contains(listener)) {
-                listeners.add(listener);
-            } else {
-                Log.w(TAG, "registerListener: " + "already exists");
-            }
-            Log.d(TAG, "registerListener: " + "listeners size " + "[" + listeners.size() + "]");
+
+            listeners.register(listener);
+            Log.d(TAG, "registerListener: " + "listeners size " + "[" + "]");
         }
 
         @Override
         public void unregisterListener(IOnNewBookArrivedListener listener) throws RemoteException {
-            if (listeners.contains(listener)) {
-                listeners.remove(listener);
-                Log.d(TAG, "unregisterListener: " + "remove SUCCESS");
-            } else {
-                Log.w(TAG, "unregisterListener: " + "not found , cannot unregisterListener");
-            }
-            Log.d(TAG, "unregisterListener: " + "listeners size " + "[" + listeners.size() + "]");
+            listeners.unregister(listener);
+            Log.d(TAG, "unregisterListener: " + "listeners size " + "[" + "]");
         }
     };
 
